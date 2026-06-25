@@ -84,14 +84,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/login' | '/audit' | '/dashboard' | '/map' | '/subscribers'
   id:
-    | '__root__'
-    | '/'
-    | '/_app'
-    | '/login'
-    | '/_app/audit'
-    | '/_app/dashboard'
-    | '/_app/map'
-    | '/_app/subscribers'
+  | '__root__'
+  | '/'
+  | '/_app'
+  | '/login'
+  | '/_app/audit'
+  | '/_app/dashboard'
+  | '/_app/map'
+  | '/_app/subscribers'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
