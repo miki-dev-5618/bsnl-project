@@ -1,0 +1,116 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  REGIONAL
+}
+
+enum SmscStatusType {
+  UP
+  DOWN
+  DEGRADED
+}
+
+enum PoiStatus {
+  ACTIVE
+  BROKEN
+  RESOLVED
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  passwordHash String
+  role         Role         @default(REGIONAL)
+  region       String?
+  createdAt    DateTime     @default(now())
+
+  smscStatuses SMSCStatus[]
+  pois         POI[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model SMSC {
+  id        String       @id @default(uuid())
+  name      String
+  city      String
+  lat       Float
+  lng       Float
+  createdAt DateTime     @default(now())
+
+  statuses  SMSCStatus[]
+  pois      POI[]
+  auditLogs AuditLog[]
+
+  @@map("smscs")
+}
+
+model SMSCStatus {
+  id          String         @id @default(uuid())
+  smscId      String
+  status      SmscStatusType
+  note        String?
+  updatedById String
+  createdAt   DateTime       @default(now())
+
+  smsc        SMSC           @relation(fields: [smscId], references: [id], onDelete: Cascade)
+  updatedBy   User           @relation(fields: [updatedById], references: [id])
+
+  @@index([smscId])
+  @@index([createdAt])
+  @@map("smsc_statuses")
+}
+
+model POI {
+  id          String    @id @default(uuid())
+  smscId      String
+  name        String
+  status      PoiStatus @default(ACTIVE)
+  note        String?
+  updatedById String
+  updatedAt   DateTime  @updatedAt
+
+  smsc        SMSC      @relation(fields: [smscId], references: [id], onDelete: Cascade)
+  updatedBy   User      @relation(fields: [updatedById], references: [id])
+
+  @@index([smscId])
+  @@map("pois")
+}
+
+model AlertSubscriber {
+  id    String  @id @default(uuid())
+  email String  @unique
+  phone String?
+
+  @@map("alert_subscribers")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  smscId    String?
+  action    String
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  smsc      SMSC?    @relation(fields: [smscId], references: [id], onDelete: SetNull)
+
+  @@index([smscId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

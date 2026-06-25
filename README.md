@@ -1,6 +1,6 @@
 # BSNL SMS Status Hub
 
-An internal dashboard for monitoring **BSNL Short Message Service Centres (SMSCs)** and their **Points of Interconnect (POIs)** across India. Built with React, TanStack Start, and a fully client-side localStorage store — no backend required.
+An internal full-stack dashboard for monitoring **BSNL Short Message Service Centres (SMSCs)** and their **Points of Interconnect (POIs)** across India. React frontend + Express/TypeScript/Prisma/PostgreSQL backend.
 
 ---
 
@@ -11,44 +11,48 @@ An internal dashboard for monitoring **BSNL Short Message Service Centres (SMSCs
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
 - [Project Structure](#project-structure)
-- [Pages & Routes](#pages--routes)
+- [Backend API](#backend-api)
+- [Frontend Pages & Routes](#frontend-pages--routes)
 - [Data Model](#data-model)
 - [Authentication & Roles](#authentication--roles)
-- [How It Works](#how-it-works)
+- [Alert System](#alert-system)
 - [Scripts](#scripts)
 
 ---
 
 ## Overview
 
-BSNL operates 16 SMSCs in major Indian cities (Delhi, Mumbai, Chennai, Kolkata, etc.). Each SMSC has 4 POIs (A–D) that can be healthy or broken. This dashboard lets operations teams:
+BSNL operates 16 SMSCs in major Indian cities (Delhi, Mumbai, Chennai, Kolkata, etc.). Each SMSC has POIs that can be healthy or broken. This dashboard lets operations teams:
 
 1. **See at a glance** which SMSCs are Up, Degraded, or Down
 2. **Drill into any SMSC** to toggle POI status, change overall status, and leave notes
 3. **View all SMSCs on a map** of India with colour-coded markers
 4. **Track every change** in an immutable audit log
 5. **Manage alert subscribers** who get notified when something goes Down/Degraded
-
-All data lives in **localStorage** — there is no backend server or database. The seed data (16 SMSCs, demo users) is created automatically on first visit.
+6. **Receive email alerts** when any SMSC status changes to DOWN or DEGRADED
 
 ---
 
 ## Features
 
-| Feature              | Description                                                                 |
-| -------------------- | --------------------------------------------------------------------------- |
-| **Dashboard**        | Card grid of all 16 SMSCs showing status, POI health, and last update time  |
-| **SMSC Detail Sheet** | Slide-over panel to change status, toggle individual POIs, and add notes   |
-| **Interactive Map**  | Leaflet map of India with colour-coded circle markers per SMSC              |
-| **Audit Log**        | Chronological table of every status change (admin-only)                     |
-| **Alert Subscribers**| Manage email addresses that receive alerts on status changes (admin-only)   |
-| **Dark / Light Mode**| Toggle between themes, preference saved to localStorage                     |
-| **Role-based Access**| Admin sees everything; regional users see Dashboard + Map only              |
-| **Responsive Layout**| Collapsible sidebar, mobile-friendly cards and tables                       |
+| Feature               | Description                                                                 |
+| --------------------- | --------------------------------------------------------------------------- |
+| **Dashboard**         | Card grid of all 16 SMSCs showing status, POI health, and last update time  |
+| **SMSC Detail Sheet** | Slide-over panel to change status, toggle individual POIs, and add notes    |
+| **Interactive Map**   | Leaflet map of India with colour-coded circle markers per SMSC              |
+| **Audit Log**         | Chronological table of every status change (admin-only)                     |
+| **Alert Subscribers** | Manage email addresses that receive alerts on status changes (admin-only)   |
+| **Email Alerts**      | Nodemailer-powered alerts to all subscribers on DOWN/DEGRADED events        |
+| **Health Check Cron** | Automated 5-minute health check of all SMSCs via node-cron                  |
+| **Dark / Light Mode** | Toggle between themes, preference saved to localStorage                     |
+| **Role-based Access** | Admin sees everything; regional users see Dashboard + Map only              |
+| **Responsive Layout** | Collapsible sidebar, mobile-friendly cards and tables                       |
 
 ---
 
 ## Tech Stack
+
+### Frontend
 
 | Layer         | Technology                                                                       |
 | ------------- | -------------------------------------------------------------------------------- |
@@ -58,11 +62,23 @@ All data lives in **localStorage** — there is no backend server or database. T
 | Styling       | Tailwind CSS 4 + [shadcn/ui](https://ui.shadcn.com) components (Radix primitives)|
 | Routing       | TanStack Router (file-based, type-safe)                                          |
 | Map           | [Leaflet](https://leafletjs.com/) + [react-leaflet](https://react-leaflet.js.org/)|
-| State         | `localStorage` with `useSyncExternalStore` (no external state library)           |
 | Icons         | [Lucide React](https://lucide.dev/)                                              |
 | Toasts        | [Sonner](https://sonner.emilkowal.dev/)                                          |
-| Hosting       | [Lovable](https://lovable.dev) (connected)                                       |
 | Language      | TypeScript 5                                                                     |
+
+### Backend
+
+| Layer         | Technology                                                      |
+| ------------- | --------------------------------------------------------------- |
+| Runtime       | Node.js 22 + Express 4                                          |
+| Language      | TypeScript 5 (strict mode)                                      |
+| ORM           | [Prisma](https://www.prisma.io/) 6.10                           |
+| Database      | PostgreSQL (Neon cloud)                                          |
+| Auth          | JWT (jsonwebtoken) + bcrypt password hashing                     |
+| Validation    | [Zod](https://zod.dev/) on all request bodies                   |
+| Emails        | [Nodemailer](https://nodemailer.com/)                            |
+| Scheduling    | [node-cron](https://github.com/node-cron/node-cron) (5-min health checks) |
+| Dev Server    | ts-node-dev (hot-reload)                                         |
 
 ---
 
@@ -72,43 +88,73 @@ All data lives in **localStorage** — there is no backend server or database. T
 
 - **Node.js** ≥ 18 (recommended: latest LTS)
 - **npm** (comes with Node) or **bun**
+- **PostgreSQL** — local instance or cloud (e.g. [Neon](https://neon.tech), free tier)
 
-### Install
+### 1. Clone & Install
 
 ```bash
-# Clone the repo
 git clone <your-repo-url>
 cd bsnl-status-hub
 
-# Install dependencies
+# Frontend dependencies
 npm install
-# or
-bun install
+
+# Backend dependencies
+cd backend
+npm install
 ```
 
-### Run Development Server
+### 2. Configure Backend
 
 ```bash
+cd backend
+cp .env.example .env
+```
+
+Edit `.env` with your values:
+
+```env
+DATABASE_URL="postgresql://user:pass@host:5432/dbname?sslmode=require"
+JWT_SECRET="your-secret-key"
+JWT_EXPIRES_IN="8h"
+PORT=4000
+
+SMTP_HOST="smtp.example.com"
+SMTP_PORT=587
+SMTP_USER="alerts@bsnl.in"
+SMTP_PASS="your-smtp-password"
+SMTP_FROM="BSNL Status Hub <alerts@bsnl.in>"
+```
+
+### 3. Set Up Database
+
+```bash
+cd backend
+
+# Push schema to database
+npx prisma db push
+
+# Seed with demo data
+npx ts-node prisma/seed.ts
+```
+
+### 4. Run
+
+```bash
+# Terminal 1 — Backend (http://localhost:4000)
+cd backend
 npm run dev
-```
 
-The app will start at **http://localhost:5173** (or the next available port). Open it in your browser.
-
-### Build for Production
-
-```bash
-npm run build
-npm run preview   # serves the production build locally
+# Terminal 2 — Frontend (http://localhost:5173)
+npm run dev
 ```
 
 ### Demo Credentials
 
-The app seeds demo accounts automatically on first load:
-
-| Role     | Email                              | Password   |
-| -------- | ---------------------------------- | ---------- |
-| Admin    | `admin@bsnl.in`                    | `admin123` |
-| Regional | `user01@bsnl.in` … `user16@bsnl.in`| `user123` |
+| Role     | Email                               | Password   |
+| -------- | ----------------------------------- | ---------- |
+| Admin    | `admin@bsnl.in`                     | `admin123` |
+| Regional | `user01@bsnl.in` … `user16@bsnl.in` | `user123`  |
 
 ---
 
@@ -116,53 +162,122 @@ The app seeds demo accounts automatically on first load:
 
 ```
 bsnl-status-hub/
-├── src/
+├── src/                              # Frontend (React + TanStack)
 │   ├── components/
-│   │   ├── ui/                  # shadcn/ui primitives (Button, Card, Sheet, Sidebar, etc.)
-│   │   ├── AppHeader.tsx        # Top header bar (title, theme toggle, user info, logout)
-│   │   ├── AppSidebar.tsx       # Sidebar navigation (role-aware menu items)
-│   │   ├── IndiaMap.tsx         # Leaflet map with colour-coded SMSC markers
-│   │   ├── SmscCard.tsx         # Dashboard card for a single SMSC
-│   │   ├── SmscSheet.tsx        # Slide-over detail panel for editing SMSC status/POIs
-│   │   └── StatusBadge.tsx      # Coloured status pill (Up / Degraded / Down)
-│   │
+│   │   ├── ui/                       # shadcn/ui primitives
+│   │   ├── AppHeader.tsx             # Header bar
+│   │   ├── AppSidebar.tsx            # Sidebar navigation
+│   │   ├── IndiaMap.tsx              # Leaflet map
+│   │   ├── SmscCard.tsx              # Dashboard card
+│   │   ├── SmscSheet.tsx             # SMSC detail panel
+│   │   └── StatusBadge.tsx           # Status pill
 │   ├── hooks/
-│   │   └── use-mobile.tsx       # Responsive breakpoint hook
-│   │
 │   ├── lib/
-│   │   ├── store.ts             # ⭐ Core data layer — localStorage CRUD, seed data, auth
-│   │   ├── format.ts            # Date/time formatting helpers
-│   │   ├── utils.ts             # cn() classname merge utility
-│   │   ├── error-capture.ts     # Error capture utilities
-│   │   ├── error-page.ts        # Error page rendering
-│   │   └── lovable-error-reporting.ts  # Lovable platform error reporting
-│   │
-│   ├── routes/
-│   │   ├── __root.tsx           # Root layout (HTML shell, QueryClientProvider, meta tags)
-│   │   ├── index.tsx            # "/" → redirects to /dashboard or /login
-│   │   ├── login.tsx            # Login page with demo credential hints
-│   │   ├── _app.tsx             # Authenticated layout (sidebar + header + auth guard)
-│   │   ├── _app.dashboard.tsx   # Dashboard page — SMSC card grid
-│   │   ├── _app.map.tsx         # Map page — full-screen Leaflet map
-│   │   ├── _app.audit.tsx       # Audit log page (admin-only)
-│   │   └── _app.subscribers.tsx # Alert subscribers management (admin-only)
-│   │
-│   ├── router.tsx               # Router instance creation
-│   ├── server.ts                # SSR server entry point
-│   ├── start.ts                 # TanStack Start entry point
-│   ├── styles.css               # Global styles + Tailwind directives + CSS custom properties
-│   └── routeTree.gen.ts         # Auto-generated route tree (do not edit manually)
+│   │   ├── store.ts                  # Core data layer
+│   │   ├── format.ts                 # Date helpers
+│   │   └── utils.ts                  # Utility functions
+│   ├── routes/                       # File-based routing
+│   └── styles.css
 │
-├── components.json              # shadcn/ui configuration
-├── vite.config.ts               # Vite config (uses @lovable.dev/vite-tanstack-config)
-├── tsconfig.json                # TypeScript config (@ path alias → src/)
-├── package.json                 # Dependencies and scripts
-└── AGENTS.md                    # Lovable sync instructions
+├── backend/                          # Backend (Express + Prisma)
+│   ├── prisma/
+│   │   ├── schema.prisma             # 6 models, 3 enums
+│   │   └── seed.ts                   # Database seeder
+│   ├── src/
+│   │   ├── config/env.ts             # Environment config
+│   │   ├── lib/prisma.ts             # Prisma client singleton
+│   │   ├── types/
+│   │   │   ├── enums.ts              # Role, SmscStatusType, PoiStatus
+│   │   │   └── express.d.ts          # Express type augmentation
+│   │   ├── schemas/                  # Zod validation schemas
+│   │   │   ├── auth.schema.ts
+│   │   │   ├── user.schema.ts
+│   │   │   ├── smsc.schema.ts
+│   │   │   ├── poi.schema.ts
+│   │   │   └── subscriber.schema.ts
+│   │   ├── middleware/
+│   │   │   ├── auth.ts               # requireAuth + requireAdmin
+│   │   │   ├── validate.ts           # Zod validation middleware
+│   │   │   └── errorHandler.ts       # Global error handler
+│   │   ├── services/
+│   │   │   ├── audit.service.ts      # Audit log operations
+│   │   │   ├── alert.service.ts      # Email alert service
+│   │   │   └── cron.service.ts       # 5-min health check
+│   │   ├── controllers/              # Route handlers
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── user.controller.ts
+│   │   │   ├── smsc.controller.ts
+│   │   │   ├── poi.controller.ts
+│   │   │   ├── subscriber.controller.ts
+│   │   │   └── audit.controller.ts
+│   │   ├── routes/                   # Express routers
+│   │   ├── app.ts                    # Express app setup
+│   │   └── server.ts                 # Entry point
+│   ├── .env
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── package.json                      # Frontend package
+├── vite.config.ts
+└── tsconfig.json
 ```
 
 ---
 
-## Pages & Routes
+## Backend API
+
+All endpoints are under `/api`. JWT Bearer token required unless noted.
+
+### Auth
+
+| Method | Route           | Auth  | Description                |
+|--------|-----------------|-------|----------------------------|
+| POST   | `/auth/login`   | —     | Login → returns JWT token  |
+| GET    | `/auth/me`      | ✅    | Get current user profile   |
+
+### Users (Admin only)
+
+| Method | Route           | Description        |
+|--------|-----------------|-------------------|
+| GET    | `/users`        | List all users     |
+| POST   | `/users`        | Create user        |
+| PUT    | `/users/:id`    | Update user        |
+| DELETE | `/users/:id`    | Delete user        |
+
+### SMSCs
+
+| Method | Route                 | Auth   | Description                          |
+|--------|-----------------------|--------|--------------------------------------|
+| GET    | `/smscs`              | ✅     | List all SMSCs with latest status    |
+| PUT    | `/smscs/:id/status`   | ✅     | Update status (triggers alerts)      |
+| GET    | `/smscs/:id/history`  | ✅     | Paginated status history             |
+
+### POIs (Points of Interconnect)
+
+| Method | Route               | Auth  | Description         |
+|--------|---------------------|-------|---------------------|
+| GET    | `/smscs/:id/pois`   | ✅    | List POIs for SMSC  |
+| POST   | `/smscs/:id/pois`   | ✅    | Create POI          |
+| PUT    | `/pois/:id`         | ✅    | Update POI          |
+| DELETE | `/pois/:id`         | ✅    | Delete POI          |
+
+### Alert Subscribers (Admin only)
+
+| Method | Route              | Description          |
+|--------|--------------------|----------------------|
+| GET    | `/subscribers`     | List subscribers     |
+| POST   | `/subscribers`     | Add subscriber       |
+| DELETE | `/subscribers/:id` | Remove subscriber    |
+
+### Audit Log (Admin only)
+
+| Method | Route    | Description                              |
+|--------|----------|------------------------------------------|
+| GET    | `/audit` | Paginated audit logs (filter by smsc/user) |
+
+---
+
+## Frontend Pages & Routes
 
 The app uses **TanStack Router's file-based routing**. Routes prefixed with `_app` are nested under the authenticated layout.
 
@@ -192,110 +307,90 @@ __root.tsx                    ← HTML shell, providers, error boundaries
 
 ## Data Model
 
-All data is stored in `localStorage` under `bsnl.*` keys and managed through `src/lib/store.ts`.
+### Prisma Schema (6 models)
 
-### SMSC
-
-```typescript
-interface SMSC {
-  id: string;           // "smsc-01"
-  name: string;         // "SMSC-01"
-  city: string;         // "Delhi"
-  lat: number;          // 28.6139
-  lng: number;          // 77.2090
-  status: Status;       // "Up" | "Down" | "Degraded"
-  lastUpdatedAt: string;// ISO timestamp
-  lastUpdatedBy: string;// email of last editor
-  pois: POI[];          // array of 4 POIs (A–D)
-}
-```
-
-### POI (Point of Interconnect)
-
-```typescript
-interface POI {
-  id: string;     // "smsc-01-poi-A"
-  name: string;   // "POI-A"
-  broken: boolean;// true = this POI is down
-}
-```
-
-### AuditEntry
-
-```typescript
-interface AuditEntry {
-  id: string;     // UUID
-  ts: string;     // ISO timestamp
-  user: string;   // email of the user who made the change
-  smsc: string;   // SMSC name
-  action: string; // description of what changed
-  note: string;   // optional note left by the user
-}
-```
+| Model             | Key Fields                                                    |
+|-------------------|---------------------------------------------------------------|
+| **User**          | id, name, email, passwordHash, role (ADMIN/REGIONAL), region  |
+| **SMSC**          | id, name, city, lat, lng                                      |
+| **SMSCStatus**    | id, smscId, status (UP/DOWN/DEGRADED), note, updatedById      |
+| **POI**           | id, smscId, name, status (ACTIVE/BROKEN/RESOLVED), note       |
+| **AlertSubscriber** | id, email, phone (nullable)                                 |
+| **AuditLog**      | id, userId, smscId, action, oldValue, newValue                |
 
 ### Seed Data
 
-On first load, the store seeds:
-- **16 SMSCs** across major Indian cities (Delhi, Mumbai, Chennai, Kolkata, Hyderabad, Bengaluru, Ahmedabad, Jaipur, Bhopal, Bhubaneswar, Guwahati, Chandigarh, Lucknow, Patna, Pune, Srinagar)
+On running `npx ts-node prisma/seed.ts`:
+- **16 SMSCs** across major Indian cities (Delhi, Mumbai, Chennai, Kolkata, Bengaluru, Hyderabad, Ahmedabad, Pune, Jaipur, Lucknow, Patna, Bhopal, Guwahati, Chandigarh, Thiruvananthapuram, Ranchi)
 - **1 admin** account + **16 regional** user accounts
-- **2 default alert subscribers** (`ops-lead@bsnl.in`, `noc@bsnl.in`)
-
-To reset all data, clear your browser's localStorage for the site.
+- **3 default alert subscribers** (`noc@bsnl.in`, `ops-lead@bsnl.in`, `cto-office@bsnl.in`)
+- **Initial UP status** for all 16 SMSCs
 
 ---
 
 ## Authentication & Roles
 
-Authentication is simulated entirely on the client side using localStorage.
+### Backend Auth
+
+- Passwords hashed with **bcrypt** (12 salt rounds)
+- Login returns a **JWT** with `{ id, email, role }` payload
+- Two middleware guards:
+  - `requireAuth` — validates JWT from `Authorization: Bearer <token>`
+  - `requireAdmin` — checks `role === 'ADMIN'`
+
+### Role Permissions
 
 | Role       | Permissions                                          |
 | ---------- | ---------------------------------------------------- |
-| `admin`    | Dashboard, Map, Audit Log, Subscribers, SMSC editing |
-| `regional` | Dashboard, Map, SMSC editing                         |
-
-- On login, a base64-encoded session token is stored in `localStorage`
-- The `_app.tsx` layout checks for a valid session; if none exists, it redirects to `/login`
-- Admin-only pages (Audit, Subscribers) check `session.role` and show an access-denied card for non-admins
-- The sidebar dynamically hides admin-only menu items for regional users
+| `ADMIN`    | All endpoints — users, SMSCs, POIs, subscribers, audit |
+| `REGIONAL` | SMSCs (list, update status, history), POIs (CRUD)    |
 
 ---
 
-## How It Works
+## Alert System
 
-### State Management
+When an SMSC status is changed to **DOWN** or **DEGRADED**:
 
-Instead of Redux or Zustand, the app uses React's built-in `useSyncExternalStore` to subscribe to `localStorage` changes. When any write happens:
+1. The `alert.service.ts` fetches all `AlertSubscriber` records
+2. Sends an HTML email via **Nodemailer** with SMSC name, city, new status, and note
+3. The email includes a colour-coded status table (red for DOWN, amber for DEGRADED)
 
-1. Data is serialized to JSON and written to `localStorage`
-2. A `bsnl:store` custom event is dispatched on `window`
-3. All subscribed React hooks re-render with the new data
+Configure SMTP in `.env`:
+```env
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-app-password"
+```
 
-This gives you reactive, real-time updates across all components without any external library.
+### Health Check Cron
 
-### Alert System
-
-When an SMSC status is changed to **Down** or **Degraded**, the app logs a console alert listing all subscriber emails. In a production version, this would dispatch actual email/SMS notifications.
-
-### Map Rendering
-
-The Leaflet map is **lazy-loaded** (dynamic `import()`) to avoid SSR issues since Leaflet requires the `window` object. Circle markers are colour-coded:
-- 🟢 Green → Up
-- 🟡 Amber → Degraded
-- 🔴 Red → Down
+A **node-cron** job runs every 5 minutes, querying all SMSCs and logging their current status. This is a stub for future integration with actual SMSC health probes.
 
 ---
 
 ## Scripts
 
+### Frontend
+
 | Command              | Description                                |
 | -------------------- | ------------------------------------------ |
 | `npm run dev`        | Start Vite dev server with HMR             |
 | `npm run build`      | Production build                           |
-| `npm run build:dev`  | Development-mode build (unminified)        |
 | `npm run preview`    | Preview the production build locally       |
 | `npm run lint`       | Run ESLint                                 |
 | `npm run format`     | Format code with Prettier                  |
 
+### Backend
+
+| Command                        | Description                            |
+| ------------------------------ | -------------------------------------- |
+| `npm run dev`                  | Start Express dev server with hot-reload |
+| `npm run build`                | Compile TypeScript to `dist/`          |
+| `npm start`                    | Run compiled production server         |
+| `npm run prisma:generate`      | Regenerate Prisma Client               |
+| `npm run prisma:migrate`       | Run database migrations                |
+| `npm run prisma:seed`          | Seed database with demo data           |
+
 ---
 
-> **Note**: This project is connected to [Lovable](https://lovable.dev). Avoid force-pushing or rewriting published git history.
