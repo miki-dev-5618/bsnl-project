@@ -99,6 +99,27 @@ async function main() {
   }
   console.log(`  ✓ Initial SMSC statuses set`);
 
+  // Create default POIs for each SMSC
+  let poiCount = 0;
+  for (let i = 0; i < smscs.length; i++) {
+    const smsc = smscs[i];
+    const operators = ["Jio", "Airtel", "Vi"];
+    for (const op of operators) {
+      const isBroken = (i === 1 && op === "Vi") || (i === 3 && op === "Jio");
+      await prisma.pOI.create({
+        data: {
+          smscId: smsc.id,
+          name: `${smsc.name}-${op}-POI`,
+          status: isBroken ? "BROKEN" : "ACTIVE",
+          note: isBroken ? "Link failure detected on interconnect trunk" : "Interconnect trunk healthy",
+          updatedById: admin.id,
+        },
+      });
+      poiCount++;
+    }
+  }
+  console.log(`  ✓ ${poiCount} POIs created`);
+
   // Create some alert subscribers
   await prisma.alertSubscriber.createMany({
     data: [

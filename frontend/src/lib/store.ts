@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { toast } from "sonner";
 
 export type Role = "admin" | "regional";
 export type Status = "Up" | "Down" | "Degraded";
@@ -7,7 +8,7 @@ export type Location = "North" | "South" | "East" | "West";
 export interface User {
   email: string;
   name: string;
-  password: string;
+  password?: string;
   role: Role;
 }
 
@@ -47,11 +48,7 @@ export interface Session {
 }
 
 const KEYS = {
-  users: "bsnl.users",
   session: "bsnl.session",
-  smscs: "bsnl.smscs",
-  audit: "bsnl.audit",
-  subs: "bsnl.subscribers",
   theme: "bsnl.theme",
 };
 
@@ -60,59 +57,28 @@ const CITIES: { city: string; location: Location; lat: number; lng: number }[] =
   { city: "Bangalore", location: "South", lat: 12.9716, lng: 77.5946 },
   { city: "Ernakulam", location: "South", lat: 9.9816, lng: 76.2999 },
   { city: "Coimbatore", location: "South", lat: 11.0168, lng: 76.9558 },
-
   { city: "Kolkata", location: "East", lat: 22.5726, lng: 88.3639 },
   { city: "Patna", location: "East", lat: 25.5941, lng: 85.1376 },
   { city: "Guwahati", location: "East", lat: 26.1445, lng: 91.7362 },
-
   { city: "Pune", location: "West", lat: 18.5204, lng: 73.8567 },
   { city: "Ahmedabad", location: "West", lat: 23.0225, lng: 72.5714 },
   { city: "Bhopal", location: "West", lat: 23.2599, lng: 77.4126 },
-
   { city: "Chandigarh", location: "North", lat: 30.7333, lng: 76.7794 },
   { city: "Delhi", location: "North", lat: 28.6139, lng: 77.209 },
   { city: "Lucknow", location: "North", lat: 26.8467, lng: 80.9462 },
   { city: "Jaipur", location: "North", lat: 26.9124, lng: 75.7873 },
 ];
 
-function seedSmscs(): SMSC[] {
-  const statuses: Status[] = ["Up", "Up", "Up", "Degraded", "Down"];
-  return CITIES.map((c, i) => {
-    const n = String(i + 1).padStart(2, "0");
-    const status = statuses[i % statuses.length];
-    return {
-      id: `smsc-${n}`,
-      name: `SMSC-${n}`,
-      city: c.city,
-      location: c.location,
-      lat: c.lat,
-      lng: c.lng,
-      status,
-      lastUpdatedAt: new Date().toISOString(),
-      lastUpdatedBy: "system",
-      pois: ["Vi", "Jio", "Airtel"].map((p) => ({
-        id: `smsc-${n}-poi-${p}`,
-        name: `POI-${p}`,
-        broken: status === "Down" ? true : status === "Degraded" && p === "A",
-      })),
-    };
-  });
+function getCityLocation(city: string): Location {
+  const c = CITIES.find((x) => x.city.toLowerCase() === city.toLowerCase());
+  return c?.location ?? "North";
 }
 
-function seedUsers(): User[] {
-  const users: User[] = [
-    { email: "admin@bsnl.in", name: "Admin", password: "admin123", role: "admin" },
-  ];
-  for (let i = 1; i <= 16; i++) {
-    const n = String(i).padStart(2, "0");
-    users.push({
-      email: `user${n}@bsnl.in`,
-      name: `Regional User ${n}`,
-      password: "user123",
-      role: "regional",
-    });
-  }
-  return users;
+function mapStatus(status: string): Status {
+  if (status === "UP") return "Up";
+  if (status === "DOWN") return "Down";
+  if (status === "DEGRADED") return "Degraded";
+  return "Up";
 }
 
 function read<T>(key: string, fallback: T): T {
@@ -129,201 +95,330 @@ function read<T>(key: string, fallback: T): T {
 function write<T>(key: string, value: T) {
   if (typeof window === "undefined") return;
   localStorage.setItem(key, JSON.stringify(value));
-  window.dispatchEvent(new CustomEvent("bsnl:store"));
 }
 
-let initialized = false;
-function ensureSeed() {
-  if (initialized || typeof window === "undefined") return;
-  initialized = true;
-  if (!localStorage.getItem(KEYS.users)) write(KEYS.users, seedUsers());
-  if (!localStorage.getItem(KEYS.smscs)) write(KEYS.smscs, seedSmscs());
-  if (!localStorage.getItem(KEYS.audit)) write(KEYS.audit, []);
-  if (!localStorage.getItem(KEYS.subs)) write(KEYS.subs, ["ops-lead@bsnl.in", "noc@bsnl.in"]);
-}
+// Global Store State
+const state = {
+  session: read<Session | null>(KEYS.session, null),
+  smscs: [] as SMSC[],
+  subscribers: [] as string[],
+  rawSubscribers: [] as { id: string; email: string }[],
+  audit: [] as AuditEntry[],
+};
 
 const listeners = new Set<() => void>();
-if (typeof window !== "undefined") {
-  window.addEventListener("bsnl:store", () => listeners.forEach((l) => l()));
-  window.addEventListener("storage", () => listeners.forEach((l) => l()));
-}
+
 function subscribe(cb: () => void) {
   listeners.add(cb);
   return () => listeners.delete(cb);
 }
 
-function useRaw(key: string, serverFallback: string): string {
-  ensureSeed();
+function notify() {
+  listeners.forEach((l) => l());
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("bsnl:store"));
+  }
+}
+
+// API client base and helpers
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+
+function getHeaders() {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (state.session?.token) {
+    headers["Authorization"] = `Bearer ${state.session.token}`;
+  }
+  return headers;
+}
+
+export async function fetchSmscs() {
+  if (!state.session) return;
+  try {
+    const res = await fetch(`${API_BASE}/smscs`, { headers: getHeaders() });
+    if (!res.ok) throw new Error("Failed to fetch SMSCs");
+    const data = await res.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    state.smscs = data.map((smsc: any) => ({
+      id: smsc.id,
+      name: smsc.name,
+      city: smsc.city,
+      location: getCityLocation(smsc.city),
+      lat: smsc.lat,
+      lng: smsc.lng,
+      status: mapStatus(smsc.currentStatus?.status ?? "UP"),
+      lastUpdatedAt: smsc.currentStatus?.createdAt ?? smsc.createdAt,
+      lastUpdatedBy: smsc.currentStatus?.updatedBy?.name ?? "system",
+      pois: smsc.pois || [],
+    }));
+    notify();
+  } catch (error) {
+    console.error("Error fetching SMSCs:", error);
+  }
+}
+
+export async function fetchSubscribers() {
+  if (!state.session) return;
+  try {
+    const res = await fetch(`${API_BASE}/subscribers`, { headers: getHeaders() });
+    if (!res.ok) throw new Error("Failed to fetch subscribers");
+    const data = await res.json();
+    state.rawSubscribers = data;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    state.subscribers = data.map((s: any) => s.email);
+    notify();
+  } catch (error) {
+    console.error("Error fetching subscribers:", error);
+  }
+}
+
+export async function fetchAuditLogs() {
+  if (!state.session) return;
+  try {
+    const res = await fetch(`${API_BASE}/audit`, { headers: getHeaders() });
+    if (!res.ok) throw new Error("Failed to fetch audit logs");
+    const result = await res.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    state.audit = result.data.map((log: any) => {
+      let action = log.action;
+      let note = "";
+
+      if (log.action === "SMSC_STATUS_UPDATE") {
+        try {
+          const parsed = JSON.parse(log.newValue || "{}");
+          action = `status ${mapStatus(log.oldValue ?? "UP")} → ${mapStatus(parsed.status ?? "UP")}`;
+          note = parsed.note || "";
+        } catch {
+          action = `status ${mapStatus(log.oldValue ?? "UP")} → ${mapStatus(log.newValue ?? "UP")}`;
+          note = "";
+        }
+      } else if (
+        log.action === "POI_CREATED" ||
+        log.action === "POI_UPDATED" ||
+        log.action === "POI_DELETED"
+      ) {
+        try {
+          const parsed = JSON.parse(log.newValue || "{}");
+          note = parsed.note || "";
+          action = `${log.action}: ${parsed.name || ""} (${parsed.status || ""})`;
+        } catch {
+          note = log.newValue || "";
+        }
+      }
+
+      return {
+        id: log.id,
+        ts: log.createdAt,
+        user: log.user?.name ?? "system",
+        smsc: log.smsc?.name ?? "N/A",
+        action,
+        note,
+      };
+    });
+    notify();
+  } catch (error) {
+    console.error("Error fetching audit logs:", error);
+  }
+}
+
+// React Hooks
+export function useSmscs(): SMSC[] {
   return useSyncExternalStore(
     subscribe,
-    () => {
-      if (typeof window === "undefined") return serverFallback;
-      return localStorage.getItem(key) ?? serverFallback;
-    },
-    () => serverFallback,
+    () => state.smscs,
+    () => [],
   );
 }
 
-function parse<T>(raw: string, fallback: T): T {
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
+export function useAudit(): AuditEntry[] {
+  return useSyncExternalStore(
+    subscribe,
+    () => state.audit,
+    () => [],
+  );
+}
+
+export function useSubscribers(): string[] {
+  return useSyncExternalStore(
+    subscribe,
+    () => state.subscribers,
+    () => [],
+  );
+}
+
+export function useSession(): Session | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => state.session,
+    () => null,
+  );
 }
 
 export function useUsers(): User[] {
-  return parse<User[]>(useRaw(KEYS.users, "[]"), []);
-}
-export function useSmscs(): SMSC[] {
-  return parse<SMSC[]>(useRaw(KEYS.smscs, "[]"), []);
-}
-export function useAudit(): AuditEntry[] {
-  return parse<AuditEntry[]>(useRaw(KEYS.audit, "[]"), []);
-}
-export function useSubscribers(): string[] {
-  return parse<string[]>(useRaw(KEYS.subs, "[]"), []);
-}
-export function useSession(): Session | null {
-  return parse<Session | null>(useRaw(KEYS.session, "null"), null);
+  return [];
 }
 
 // Actions
-function getUsers(): User[] {
-  ensureSeed();
-  return read<User[]>(KEYS.users, []);
-}
-function getSmscs(): SMSC[] {
-  ensureSeed();
-  return read<SMSC[]>(KEYS.smscs, []);
-}
-function getAudit(): AuditEntry[] {
-  return read<AuditEntry[]>(KEYS.audit, []);
-}
-function getSubs(): string[] {
-  return read<string[]>(KEYS.subs, []);
-}
+export async function login(email: string, password: string): Promise<Session | null> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const session: Session = {
+      token: data.token,
+      email: data.user.email,
+      name: data.user.name,
+      role: data.user.role.toLowerCase() as Role,
+    };
+    state.session = session;
+    write(KEYS.session, session);
+    notify();
 
-export function login(email: string, password: string): Session | null {
-  const u = getUsers().find(
-    (x) => x.email.toLowerCase() === email.toLowerCase() && x.password === password,
-  );
-  if (!u) return null;
-  const payload = { email: u.email, name: u.name, role: u.role, exp: Date.now() + 86400000 };
-  const token = btoa(JSON.stringify(payload));
-  const session: Session = { token, email: u.email, name: u.name, role: u.role };
-  write(KEYS.session, session);
-  return session;
+    // Trigger async data load on login
+    fetchSmscs();
+    fetchSubscribers();
+    fetchAuditLogs();
+
+    return session;
+  } catch (error) {
+    console.error("Login failed:", error);
+    return null;
+  }
 }
 
 export function logout() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(KEYS.session);
-  window.dispatchEvent(new CustomEvent("bsnl:store"));
+  state.session = null;
+  state.smscs = [];
+  state.subscribers = [];
+  state.rawSubscribers = [];
+  state.audit = [];
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(KEYS.session);
+  }
+  notify();
 }
 
-export function addUser(u: User) {
-  const users = getUsers();
-  if (users.some((x) => x.email === u.email)) throw new Error("Email exists");
-  write(KEYS.users, [...users, u]);
-}
-export function removeUser(email: string) {
-  write(
-    KEYS.users,
-    getUsers().filter((u) => u.email !== email),
-  );
-}
-export function resetPassword(email: string, password: string) {
-  write(
-    KEYS.users,
-    getUsers().map((u) => (u.email === email ? { ...u, password } : u)),
-  );
-}
-
-function appendAudit(entry: Omit<AuditEntry, "id" | "ts">) {
-  const e: AuditEntry = {
-    ...entry,
-    id: crypto.randomUUID(),
-    ts: new Date().toISOString(),
-  };
-  write(KEYS.audit, [e, ...getAudit()]);
-}
-
-export function updateSmsc(
+export async function updateSmsc(
   id: string,
   patch: { status?: Status; pois?: POI[]; note: string },
-  user: string,
+  userEmail: string,
 ) {
-  const list = getSmscs();
-  const before = list.find((s) => s.id === id);
+  if (!state.session) return;
+  const before = state.smscs.find((s) => s.id === id);
   if (!before) return;
-  const after: SMSC = {
-    ...before,
-    status: patch.status ?? before.status,
-    pois: patch.pois ?? before.pois,
-    lastUpdatedAt: new Date().toISOString(),
-    lastUpdatedBy: user,
-  };
-  write(
-    KEYS.smscs,
-    list.map((s) => (s.id === id ? after : s)),
-  );
 
-  const changes: string[] = [];
-  if (patch.status && patch.status !== before.status) {
-    changes.push(`status ${before.status} → ${patch.status}`);
-  }
-  if (patch.pois) {
-    patch.pois.forEach((p) => {
-      const prev = before.pois.find((x) => x.id === p.id);
-      if (prev && prev.broken !== p.broken) {
-        changes.push(`${p.name} ${p.broken ? "marked broken" : "resolved"}`);
+  try {
+    // 1. Update SMSC status if changed
+    if (patch.status && patch.status !== before.status) {
+      const statusMap = {
+        Up: "UP",
+        Down: "DOWN",
+        Degraded: "DEGRADED",
+      };
+      const res = await fetch(`${API_BASE}/smscs/${id}/status`, {
+        method: "PUT",
+        headers: getHeaders(),
+        body: JSON.stringify({
+          status: statusMap[patch.status],
+          note: patch.note,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update SMSC status");
+    }
+
+    // 2. Update POI status if changed
+    if (patch.pois) {
+      for (const p of patch.pois) {
+        const prev = before.pois.find((x) => x.id === p.id);
+        if (prev && prev.broken !== p.broken) {
+          const res = await fetch(`${API_BASE}/pois/${p.id}`, {
+            method: "PUT",
+            headers: getHeaders(),
+            body: JSON.stringify({
+              status: p.broken ? "BROKEN" : "ACTIVE",
+              note: patch.note || undefined,
+            }),
+          });
+          if (!res.ok) throw new Error(`Failed to update POI ${p.name}`);
+        }
       }
+    }
+
+    // Refresh store state after updates
+    await fetchSmscs();
+    await fetchAuditLogs();
+  } catch (error) {
+    console.error("Error updating SMSC:", error);
+    toast.error("Failed to save changes");
+  }
+}
+
+export async function addSubscriber(email: string) {
+  if (!state.session) return;
+  try {
+    const res = await fetch(`${API_BASE}/subscribers`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ email }),
     });
-  }
-  if (changes.length === 0 && !patch.note) return;
-  appendAudit({
-    user,
-    smsc: before.name,
-    action: changes.join("; ") || "note added",
-    note: patch.note,
-  });
-
-  if (
-    patch.status &&
-    patch.status !== before.status &&
-    (patch.status === "Down" || patch.status === "Degraded")
-  ) {
-    const subs = getSubs();
-    console.log(`[ALERT] ${before.name} → ${patch.status}. Notifying:`, subs);
+    if (!res.ok) throw new Error("Failed to add subscriber");
+    await fetchSubscribers();
+  } catch (error) {
+    console.error("Error adding subscriber:", error);
+    toast.error("Failed to add subscriber");
   }
 }
 
-export function addSubscriber(email: string) {
-  const subs = getSubs();
-  if (subs.includes(email)) return;
-  write(KEYS.subs, [...subs, email]);
-}
-export function removeSubscriber(email: string) {
-  write(
-    KEYS.subs,
-    getSubs().filter((s) => s !== email),
-  );
+export async function removeSubscriber(email: string) {
+  if (!state.session) return;
+  const sub = state.rawSubscribers.find((s) => s.email === email);
+  if (!sub) return;
+  try {
+    const res = await fetch(`${API_BASE}/subscribers/${sub.id}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to remove subscriber");
+    await fetchSubscribers();
+  } catch (error) {
+    console.error("Error removing subscriber:", error);
+    toast.error("Failed to remove subscriber");
+  }
 }
 
-// Theme
+export function addUser(u: User) {}
+export function removeUser(email: string) {}
+export function resetPassword(email: string, password: string) {}
+
+// Theme Configuration
 export function initTheme() {
   if (typeof window === "undefined") return;
   const t = localStorage.getItem(KEYS.theme) ?? "light";
   document.documentElement.classList.toggle("dark", t === "dark");
 }
+
 export function toggleTheme() {
   if (typeof window === "undefined") return;
   const isDark = document.documentElement.classList.toggle("dark");
   localStorage.setItem(KEYS.theme, isDark ? "dark" : "light");
-  window.dispatchEvent(new CustomEvent("bsnl:store"));
+  notify();
 }
+
 export function currentTheme(): "dark" | "light" {
   if (typeof window === "undefined") return "light";
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+// Trigger initial fetches in background on start if session exists
+if (state.session) {
+  setTimeout(() => {
+    fetchSmscs();
+    fetchSubscribers();
+    fetchAuditLogs();
+  }, 0);
 }

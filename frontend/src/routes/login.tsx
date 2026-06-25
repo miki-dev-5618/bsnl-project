@@ -23,9 +23,9 @@ function LoginPage() {
     if (session) navigate({ to: "/dashboard", replace: true });
   }, [session, navigate]);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const s = login(email, password);
+    const s = await login(email, password);
     if (!s) {
       toast.error("Invalid email or password");
       return;

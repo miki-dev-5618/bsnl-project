@@ -21,6 +21,9 @@ export async function listSmscs(_req: Request, res: Response): Promise<void> {
         },
       },
       _count: { select: { pois: true } },
+      pois: {
+        orderBy: { name: "asc" },
+      },
     },
     orderBy: { name: "asc" },
   });
@@ -34,6 +37,11 @@ export async function listSmscs(_req: Request, res: Response): Promise<void> {
     createdAt: smsc.createdAt,
     currentStatus: smsc.statuses[0] ?? null,
     poiCount: smsc._count.pois,
+    pois: smsc.pois.map((poi: any) => ({
+      id: poi.id,
+      name: poi.name,
+      broken: poi.status === "BROKEN",
+    })),
   }));
 
   res.json(result);
@@ -69,7 +77,7 @@ export async function updateSmscStatus(req: Request, res: Response): Promise<voi
     smscId: id,
     action: "SMSC_STATUS_UPDATE",
     oldValue: prevStatus?.status ?? null,
-    newValue: status,
+    newValue: JSON.stringify({ status, note }),
   });
 
   // Alert subscribers on DOWN/DEGRADED
