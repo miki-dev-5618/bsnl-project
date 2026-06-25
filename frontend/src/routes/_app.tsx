@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -6,11 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Toaster } from "@/components/ui/sonner";
 import { useSession, initTheme } from "@/lib/store";
 
-export const Route = createFileRoute("/_app")({
-  component: AppLayout,
-});
-
-function AppLayout() {
+export default function AppLayout() {
   const session = useSession();
   const navigate = useNavigate();
 
@@ -19,7 +15,7 @@ function AppLayout() {
   }, []);
 
   useEffect(() => {
-    if (session === null) navigate({ to: "/login", replace: true });
+    if (session === null) navigate("/login", { replace: true });
   }, [session, navigate]);
 
   if (!session) return null;

@@ -1,18 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SmscCard } from "@/components/SmscCard";
 import { SmscSheet } from "@/components/SmscSheet";
 import { useSmscs, type SMSC } from "@/lib/store";
 
-export const Route = createFileRoute("/_app/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard · BSNL SMS" }] }),
-  component: Dashboard,
-});
-
-function Dashboard() {
+export default function Dashboard() {
   const smscs = useSmscs();
   const [selected, setSelected] = useState<SMSC | null>(null);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    document.title = "Dashboard · BSNL SMS";
+  }, []);
 
   const counts = smscs.reduce(
     (acc, s) => ({ ...acc, [s.status]: (acc[s.status] ?? 0) + 1 }),

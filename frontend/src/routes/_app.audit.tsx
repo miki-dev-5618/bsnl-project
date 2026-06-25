@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -11,14 +11,13 @@ import {
 import { useAudit, useSession } from "@/lib/store";
 import { formatDateTime } from "@/lib/format";
 
-export const Route = createFileRoute("/_app/audit")({
-  head: () => ({ meta: [{ title: "Audit log · BSNL SMS" }] }),
-  component: AuditPage,
-});
-
-function AuditPage() {
+export default function AuditPage() {
   const session = useSession();
   const audit = useAudit();
+
+  useEffect(() => {
+    document.title = "Audit log · BSNL SMS";
+  }, []);
 
   if (session?.role !== "admin") {
     return (

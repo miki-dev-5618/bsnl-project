@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useLocation } from "react-router-dom";
 import { LayoutGrid, Map, Mail, ScrollText } from "lucide-react";
 import {
   Sidebar,
@@ -15,7 +15,7 @@ import { useSession } from "@/lib/store";
 
 export function AppSidebar() {
   const session = useSession();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { pathname } = useLocation();
   const isAdmin = session?.role === "admin";
 
   const items = [

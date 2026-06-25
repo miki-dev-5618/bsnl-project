@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { LogOut, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ export function AppHeader() {
             size="sm"
             onClick={() => {
               logout();
-              navigate({ to: "/login" });
+              navigate("/login");
             }}
           >
             <LogOut className="mr-1.5 h-3.5 w-3.5" />

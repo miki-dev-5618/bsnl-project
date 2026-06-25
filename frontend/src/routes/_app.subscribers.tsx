@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -15,15 +14,14 @@ import { Trash2 } from "lucide-react";
 import { addSubscriber, removeSubscriber, useSession, useSubscribers } from "@/lib/store";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_app/subscribers")({
-  head: () => ({ meta: [{ title: "Subscribers · BSNL SMS" }] }),
-  component: Subscribers,
-});
-
-function Subscribers() {
+export default function Subscribers() {
   const session = useSession();
   const subs = useSubscribers();
   const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    document.title = "Subscribers · BSNL SMS";
+  }, []);
 
   if (session?.role !== "admin") {
     return (
