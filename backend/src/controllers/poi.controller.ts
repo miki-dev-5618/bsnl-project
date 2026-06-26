@@ -4,6 +4,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { CreatePoiInput, UpdatePoiInput } from "../schemas/poi.schema";
 import { createAuditLog } from "../services/audit.service";
+import { notifyPoiStatus } from "../services/alert.service";
 
 function paramId(req: Request): string {
   return req.params.id as string;
@@ -62,7 +63,10 @@ export async function updatePoi(req: Request, res: Response): Promise<void> {
   const body = req.body as UpdatePoiInput;
   const userId = req.user!.id;
 
-  const existing = await prisma.pOI.findUnique({ where: { id } });
+  const existing = await prisma.pOI.findUnique({ 
+    where: { id },
+    include: { smsc: true }
+  });
   if (!existing) {
     res.status(404).json({ error: "POI not found" });
     return;
@@ -89,6 +93,12 @@ export async function updatePoi(req: Request, res: Response): Promise<void> {
     oldValue,
     newValue: JSON.stringify({ name: poi.name, status: poi.status, note: poi.note }),
   });
+
+  if (existing.status === "ACTIVE" && poi.status === "BROKEN") {
+    notifyPoiStatus(poi.name, existing.smsc.name, poi.status, poi.note ?? undefined).catch((err) => {
+      console.error("[Alert] Background POI notification failed:", err);
+    });
+  }
 
   res.json(poi);
 }
