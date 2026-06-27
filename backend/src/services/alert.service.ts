@@ -3,17 +3,41 @@
 import nodemailer from "nodemailer";
 import { env } from "../config/env";
 import { prisma } from "../lib/prisma";
-import { SmscStatusType } from "../types/enums";
 
 const transporter = nodemailer.createTransport({
-  host: env.SMTP_HOST,
-  port: env.SMTP_PORT,
-  secure: env.SMTP_PORT === 465,
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
-    user: env.SMTP_USER,
-    pass: env.SMTP_PASS,
+    user: env.GMAIL_USER,
+    pass: env.GMAIL_APP_PASSWORD,
   },
 });
+
+/**
+ * Reusable helper function to send an email to a single recipient.
+ * Fully awaited and logs any individual success/error.
+ */
+async function sendGmail(to: string, subject: string, html: string): Promise<boolean> {
+  try {
+    if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
+      console.warn("[Alert] Gmail user or App Password is not configured in .env. Skipping email.");
+      return false;
+    }
+    
+    await transporter.sendMail({
+      from: `"BSNL Status Hub" <${env.GMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log(`[Alert] Email sent successfully to ${to}`);
+    return true;
+  } catch (error) {
+    console.error(`[Alert] Failed to send email to ${to}:`, error);
+    return false;
+  }
+}
 
 export async function notifySubscribers(
   smscName: string,
@@ -21,7 +45,6 @@ export async function notifySubscribers(
   newStatus: string,
   note?: string
 ) {
-
   const subscribers = await prisma.alertSubscriber.findMany();
   if (subscribers.length === 0) {
     console.log("[Alert] No subscribers to notify");
@@ -64,18 +87,10 @@ export async function notifySubscribers(
   `;
 
   const emails = subscribers.map((s: { email: string }) => s.email);
-  try {
-    console.log(`[Mailer] Sending subscriber notification to ${emails.join(", ")} via ${env.SMTP_HOST}:${env.SMTP_PORT}...`);
-    await transporter.sendMail({
-      from: env.SMTP_FROM,
-      to: emails.join(","),
-      subject,
-      html,
-    });
-    console.log(`[Alert] Notification sent to ${emails.length} subscriber(s)`);
-  } catch (err) {
-    console.error("[Alert] Failed to send email:", err);
-  }
+  console.log(`[Alert] Sending SMSC status updates to ${emails.length} subscribers...`);
+  
+  const sendPromises = emails.map(email => sendGmail(email, subject, html));
+  await Promise.all(sendPromises);
 }
 
 export async function notifyPoiStatus(
@@ -126,16 +141,8 @@ export async function notifyPoiStatus(
   `;
 
   const emails = subscribers.map((s: { email: string }) => s.email);
-  try {
-    console.log(`[Mailer] Sending POI notification to ${emails.join(", ")} via ${env.SMTP_HOST}:${env.SMTP_PORT}...`);
-    await transporter.sendMail({
-      from: env.SMTP_FROM,
-      to: emails.join(","),
-      subject,
-      html,
-    });
-    console.log(`[Alert] Notification sent to ${emails.length} subscriber(s) for POI ${poiName}`);
-  } catch (err) {
-    console.error("[Alert] Failed to send email for POI:", err);
-  }
+  console.log(`[Alert] Sending POI status updates to ${emails.length} subscribers...`);
+  
+  const sendPromises = emails.map(email => sendGmail(email, subject, html));
+  await Promise.all(sendPromises);
 }

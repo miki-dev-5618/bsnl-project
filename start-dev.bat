@@ -5,8 +5,8 @@ echo.
 echo  ╔═══════════════════════════════════════════════╗
 echo  ║       BSNL Status Hub - Full Stack Dev        ║
 echo  ║                                               ║
-echo  ║   Frontend : http://localhost:5173             ║
-echo  ║   Backend  : http://localhost:4000             ║
+echo  ║   Frontend : http://localhost:5173            ║
+echo  ║   Backend  : http://localhost:4000            ║
 echo  ╚═══════════════════════════════════════════════╝
 echo.
 
