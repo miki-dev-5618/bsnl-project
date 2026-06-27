@@ -63,7 +63,7 @@ export async function notifySubscribers(
     </div>
   `;
 
-  const emails = ["navyaataneja5618@gmail.com"];
+  const emails = subscribers.map((s: { email: string }) => s.email);
   try {
     console.log(`[Mailer] Sending subscriber notification to ${emails.join(", ")} via ${env.SMTP_HOST}:${env.SMTP_PORT}...`);
     await transporter.sendMail({
@@ -125,7 +125,7 @@ export async function notifyPoiStatus(
     </div>
   `;
 
-  const emails = ["navyaataneja5618@gmail.com"];
+  const emails = subscribers.map((s: { email: string }) => s.email);
   try {
     console.log(`[Mailer] Sending POI notification to ${emails.join(", ")} via ${env.SMTP_HOST}:${env.SMTP_PORT}...`);
     await transporter.sendMail({
