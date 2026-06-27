@@ -94,7 +94,10 @@ export async function updatePoi(req: Request, res: Response): Promise<void> {
     newValue: JSON.stringify({ name: poi.name, status: poi.status, note: poi.note }),
   });
 
-  if (existing.status === "ACTIVE" && poi.status === "BROKEN") {
+  const isBroken = existing.status === "ACTIVE" && poi.status === "BROKEN";
+  const isFixed = existing.status === "BROKEN" && (poi.status === "RESOLVED" || poi.status === "ACTIVE");
+
+  if (isBroken || isFixed) {
     notifyPoiStatus(poi.name, existing.smsc.name, poi.status, poi.note ?? undefined).catch((err) => {
       console.error("[Alert] Background POI notification failed:", err);
     });
