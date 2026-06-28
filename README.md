@@ -42,7 +42,7 @@ BSNL operates 16 SMSCs in major Indian cities (Delhi, Mumbai, Chennai, Kolkata, 
 | **Interactive Map**   | Leaflet map of India with colour-coded circle markers per SMSC              |
 | **Audit Log**         | Chronological table of every status change (admin-only)                     |
 | **Alert Subscribers** | Manage email addresses that receive alerts on status changes (admin-only)   |
-| **Email Alerts**      | Nodemailer-powered alerts to all subscribers on DOWN/DEGRADED events        |
+| **Email Alerts**      | Resend-powered alerts to all subscribers on SMSC and POI status changes    |
 | **Health Check Cron** | Automated 5-minute health check of all SMSCs via node-cron                  |
 | **Dark / Light Mode** | Toggle between themes, preference saved to localStorage                     |
 | **Role-based Access** | Admin sees everything; regional users see Dashboard + Map only              |
@@ -56,11 +56,11 @@ BSNL operates 16 SMSCs in major Indian cities (Delhi, Mumbai, Chennai, Kolkata, 
 
 | Layer         | Technology                                                                       |
 | ------------- | -------------------------------------------------------------------------------- |
-| Framework     | [TanStack Start](https://tanstack.com/start) (SSR + file-based routing)          |
+| Framework     | [React](https://react.dev/) 19 (SPA via Vite)                                    |
 | UI Library    | React 19                                                                         |
 | Build Tool    | Vite 8                                                                           |
 | Styling       | Tailwind CSS 4 + [shadcn/ui](https://ui.shadcn.com) components (Radix primitives)|
-| Routing       | TanStack Router (file-based, type-safe)                                          |
+| Routing       | [React Router](https://reactrouter.com/) 7                                       |
 | Map           | [Leaflet](https://leafletjs.com/) + [react-leaflet](https://react-leaflet.js.org/)|
 | Icons         | [Lucide React](https://lucide.dev/)                                              |
 | Toasts        | [Sonner](https://sonner.emilkowal.dev/)                                          |
@@ -76,7 +76,7 @@ BSNL operates 16 SMSCs in major Indian cities (Delhi, Mumbai, Chennai, Kolkata, 
 | Database      | PostgreSQL (Neon cloud)                                          |
 | Auth          | JWT (jsonwebtoken) + bcrypt password hashing                     |
 | Validation    | [Zod](https://zod.dev/) on all request bodies                   |
-| Emails        | [Nodemailer](https://nodemailer.com/)                            |
+| Emails        | [Resend](https://resend.com/) SDK                                |
 | Scheduling    | [node-cron](https://github.com/node-cron/node-cron) (5-min health checks) |
 | Dev Server    | ts-node-dev (hot-reload)                                         |
 
@@ -97,10 +97,11 @@ git clone <your-repo-url>
 cd bsnl-status-hub
 
 # Frontend dependencies
+cd frontend
 npm install
 
 # Backend dependencies
-cd backend
+cd ../backend
 npm install
 ```
 
@@ -119,11 +120,8 @@ JWT_SECRET="your-secret-key"
 JWT_EXPIRES_IN="8h"
 PORT=4000
 
-SMTP_HOST="smtp.example.com"
-SMTP_PORT=587
-SMTP_USER="alerts@bsnl.in"
-SMTP_PASS="your-smtp-password"
-SMTP_FROM="BSNL Status Hub <alerts@bsnl.in>"
+SMTP_FROM="BSNL Status Hub <alerts@navyaa-dev.me>"
+RESEND_API_KEY="your-resend-api-key"
 ```
 
 ### 3. Set Up Database
@@ -146,6 +144,7 @@ cd backend
 npm run dev
 
 # Terminal 2 — Frontend (http://localhost:5173)
+cd frontend
 npm run dev
 ```
 
@@ -162,22 +161,29 @@ npm run dev
 
 ```
 bsnl-status-hub/
-├── src/                              # Frontend (React + TanStack)
-│   ├── components/
-│   │   ├── ui/                       # shadcn/ui primitives
-│   │   ├── AppHeader.tsx             # Header bar
-│   │   ├── AppSidebar.tsx            # Sidebar navigation
-│   │   ├── IndiaMap.tsx              # Leaflet map
-│   │   ├── SmscCard.tsx              # Dashboard card
-│   │   ├── SmscSheet.tsx             # SMSC detail panel
-│   │   └── StatusBadge.tsx           # Status pill
-│   ├── hooks/
-│   ├── lib/
-│   │   ├── store.ts                  # Core data layer
-│   │   ├── format.ts                 # Date helpers
-│   │   └── utils.ts                  # Utility functions
-│   ├── routes/                       # File-based routing
-│   └── styles.css
+├── frontend/                         # Frontend (React + React Router)
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ui/                   # shadcn/ui primitives
+│   │   │   ├── AppHeader.tsx         # Header bar
+│   │   │   ├── AppSidebar.tsx        # Sidebar navigation
+│   │   │   ├── IndiaMap.tsx          # Leaflet map
+│   │   │   ├── SmscCard.tsx          # Dashboard card
+│   │   │   ├── SmscSheet.tsx         # SMSC detail panel
+│   │   │   └── StatusBadge.tsx       # Status pill
+│   │   ├── hooks/
+│   │   ├── lib/
+│   │   │   ├── store.ts              # Core data layer
+│   │   │   ├── format.ts             # Date helpers
+│   │   │   └── utils.ts              # Utility functions
+│   │   ├── routes/                   # Router views/components
+│   │   │   └── README.md
+│   │   ├── App.tsx                   # Router & routes setup
+│   │   ├── main.tsx                  # Application entry point
+│   │   └── styles.css
+│   ├── package.json                  # Frontend package
+│   ├── vite.config.ts
+│   └── tsconfig.json
 │
 ├── backend/                          # Backend (Express + Prisma)
 │   ├── prisma/
@@ -216,10 +222,7 @@ bsnl-status-hub/
 │   ├── .env
 │   ├── package.json
 │   └── tsconfig.json
-│
-├── package.json                      # Frontend package
-├── vite.config.ts
-└── tsconfig.json
+└── start-dev.bat                     # Full stack dev launcher
 ```
 
 ---
@@ -279,7 +282,7 @@ All endpoints are under `/api`. JWT Bearer token required unless noted.
 
 ## Frontend Pages & Routes
 
-The app uses **TanStack Router's file-based routing**. Routes prefixed with `_app` are nested under the authenticated layout.
+The app uses **React Router** for routing, defined in `App.tsx`. Routes prefixed with `_app` are nested under the authenticated layout.
 
 ```
 /                   → Auto-redirect to /login or /dashboard
@@ -293,7 +296,7 @@ The app uses **TanStack Router's file-based routing**. Routes prefixed with `_ap
 ### Route Layout Hierarchy
 
 ```
-__root.tsx                    ← HTML shell, providers, error boundaries
+App.tsx                       ← Router & routes configuration
 ├── index.tsx                 ← redirect logic
 ├── login.tsx                 ← standalone login page
 └── _app.tsx                  ← authenticated layout (sidebar + header + auth guard)
@@ -349,18 +352,16 @@ On running `npx ts-node prisma/seed.ts`:
 
 ## Alert System
 
-When an SMSC status is changed to **DOWN** or **DEGRADED**:
+When an SMSC status is changed to **DOWN** or **DEGRADED** (or when a POI status is toggled):
 
-1. The `alert.service.ts` fetches all `AlertSubscriber` records
-2. Sends an HTML email via **Nodemailer** with SMSC name, city, new status, and note
-3. The email includes a colour-coded status table (red for DOWN, amber for DEGRADED)
+1. The `alert.service.ts` fetches all `AlertSubscriber` records.
+2. Sends an HTML email via **Resend** with the status details, using a colour-coded template.
+3. Emails are batched and delivered using Resend's batch send API.
 
-Configure SMTP in `.env`:
+Configure Resend in `.env`:
 ```env
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT=587
-SMTP_USER="your-email@gmail.com"
-SMTP_PASS="your-app-password"
+SMTP_FROM="BSNL Status Hub <alerts@navyaa-dev.me>"
+RESEND_API_KEY="your-resend-api-key"
 ```
 
 ### Health Check Cron

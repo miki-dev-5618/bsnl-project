@@ -29,9 +29,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
         <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
-            BS
-          </div>
+          <img
+            src="/logo/logo.png"
+            alt="BSNL Logo"
+            className="h-8 w-auto object-contain"
+          />
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-semibold">BSNL</span>
             <span className="text-xs text-muted-foreground">SMS Dashboard</span>
