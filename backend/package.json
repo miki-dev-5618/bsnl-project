@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "nodemon --watch src -e ts,js --exec ts-node -T src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
@@ -23,6 +23,7 @@
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.1",
+    "resend": "^6.16.0",
     "zod": "^3.24.4"
   },
   "devDependencies": {
@@ -33,6 +34,7 @@
     "@types/node": "^22.15.21",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.17",
+    "nodemon": "^3.1.14",
     "prisma": "6.10.1",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",

@@ -1,19 +1,10 @@
 // src/services/alert.service.ts
 
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { env } from "../config/env";
 import { prisma } from "../lib/prisma";
-import { SmscStatusType } from "../types/enums";
 
-const transporter = nodemailer.createTransport({
-  host: env.SMTP_HOST,
-  port: env.SMTP_PORT,
-  secure: env.SMTP_PORT === 465,
-  auth: {
-    user: env.SMTP_USER,
-    pass: env.SMTP_PASS,
-  },
-});
+const resend = new Resend(env.RESEND_API_KEY);
 
 export async function notifySubscribers(
   smscName: string,
@@ -21,7 +12,6 @@ export async function notifySubscribers(
   newStatus: string,
   note?: string
 ) {
-
   const subscribers = await prisma.alertSubscriber.findMany();
   if (subscribers.length === 0) {
     console.log("[Alert] No subscribers to notify");
@@ -65,16 +55,26 @@ export async function notifySubscribers(
 
   const emails = subscribers.map((s: { email: string }) => s.email);
   try {
-    console.log(`[Mailer] Sending subscriber notification to ${emails.join(", ")} via ${env.SMTP_HOST}:${env.SMTP_PORT}...`);
-    await transporter.sendMail({
+    console.log(`[Mailer] Sending subscriber notification using Resend...`);
+    
+    const batchMessages = emails.map((email: string) => ({
       from: env.SMTP_FROM,
-      to: emails.join(","),
+      to: [email],
       subject,
       html,
-    });
-    console.log(`[Alert] Notification sent to ${emails.length} subscriber(s)`);
+    }));
+
+    const { data, error } = await resend.batch.send(batchMessages);
+    console.log('[Alert] Resend batch data:', data);
+    console.log('[Alert] Resend batch error:', error);
+    
+    if (error) {
+      console.error("[Alert] Resend API error occurred:", error.message || error);
+    } else {
+      console.log(`[Alert] Notification sent to ${emails.length} subscriber(s)`);
+    }
   } catch (err) {
-    console.error("[Alert] Failed to send email:", err);
+    console.error("[Alert] Network/System error sending email via Resend:", err);
   }
 }
 
@@ -127,15 +127,25 @@ export async function notifyPoiStatus(
 
   const emails = subscribers.map((s: { email: string }) => s.email);
   try {
-    console.log(`[Mailer] Sending POI notification to ${emails.join(", ")} via ${env.SMTP_HOST}:${env.SMTP_PORT}...`);
-    await transporter.sendMail({
+    console.log(`[Mailer] Sending POI notification using Resend...`);
+
+    const batchMessages = emails.map((email: string) => ({
       from: env.SMTP_FROM,
-      to: emails.join(","),
+      to: [email],
       subject,
       html,
-    });
-    console.log(`[Alert] Notification sent to ${emails.length} subscriber(s) for POI ${poiName}`);
+    }));
+
+    const { data, error } = await resend.batch.send(batchMessages);
+    console.log('[Alert] Resend POI batch data:', data);
+    console.log('[Alert] Resend POI batch error:', error);
+
+    if (error) {
+      console.error("[Alert] Resend API error occurred for POI:", error.message || error);
+    } else {
+      console.log(`[Alert] Notification sent to ${emails.length} subscriber(s) for POI ${poiName}`);
+    }
   } catch (err) {
-    console.error("[Alert] Failed to send email for POI:", err);
+    console.error("[Alert] Network/System error sending email for POI via Resend:", err);
   }
 }
