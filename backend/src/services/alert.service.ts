@@ -1,18 +1,10 @@
 // src/services/alert.service.ts
 
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { env } from "../config/env";
 import { prisma } from "../lib/prisma";
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: env.GMAIL_USER,
-    pass: env.GMAIL_APP_PASSWORD,
-  },
-});
+const resend = new Resend(env.RESEND_API_KEY);
 
 /**
  * Reusable helper function to send an email to a single recipient.
@@ -87,10 +79,28 @@ export async function notifySubscribers(
   `;
 
   const emails = subscribers.map((s: { email: string }) => s.email);
-  console.log(`[Alert] Sending SMSC status updates to ${emails.length} subscribers...`);
-  
-  const sendPromises = emails.map(email => sendGmail(email, subject, html));
-  await Promise.all(sendPromises);
+  try {
+    console.log(`[Mailer] Sending subscriber notification using Resend...`);
+    
+    const batchMessages = emails.map((email: string) => ({
+      from: env.SMTP_FROM,
+      to: [email],
+      subject,
+      html,
+    }));
+
+    const { data, error } = await resend.batch.send(batchMessages);
+    console.log('[Alert] Resend batch data:', data);
+    console.log('[Alert] Resend batch error:', error);
+    
+    if (error) {
+      console.error("[Alert] Resend API error occurred:", error.message || error);
+    } else {
+      console.log(`[Alert] Notification sent to ${emails.length} subscriber(s)`);
+    }
+  } catch (err) {
+    console.error("[Alert] Network/System error sending email via Resend:", err);
+  }
 }
 
 export async function notifyPoiStatus(
@@ -141,8 +151,26 @@ export async function notifyPoiStatus(
   `;
 
   const emails = subscribers.map((s: { email: string }) => s.email);
-  console.log(`[Alert] Sending POI status updates to ${emails.length} subscribers...`);
-  
-  const sendPromises = emails.map(email => sendGmail(email, subject, html));
-  await Promise.all(sendPromises);
+  try {
+    console.log(`[Mailer] Sending POI notification using Resend...`);
+
+    const batchMessages = emails.map((email: string) => ({
+      from: env.SMTP_FROM,
+      to: [email],
+      subject,
+      html,
+    }));
+
+    const { data, error } = await resend.batch.send(batchMessages);
+    console.log('[Alert] Resend POI batch data:', data);
+    console.log('[Alert] Resend POI batch error:', error);
+
+    if (error) {
+      console.error("[Alert] Resend API error occurred for POI:", error.message || error);
+    } else {
+      console.log(`[Alert] Notification sent to ${emails.length} subscriber(s) for POI ${poiName}`);
+    }
+  } catch (err) {
+    console.error("[Alert] Network/System error sending email for POI via Resend:", err);
+  }
 }

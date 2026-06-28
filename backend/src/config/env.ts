@@ -11,6 +11,10 @@ export const env = {
   JWT_SECRET: process.env.JWT_SECRET || "fallback-secret-do-not-use",
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "8h",
 
-  GMAIL_USER: process.env.GMAIL_USER || "",
-  GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD || "",
+  SMTP_HOST: process.env.SMTP_HOST || "smtp.example.com",
+  SMTP_PORT: parseInt(process.env.SMTP_PORT || "587", 10),
+  SMTP_USER: process.env.SMTP_USER || "",
+  SMTP_PASS: process.env.SMTP_PASS || "",
+  SMTP_FROM: process.env.SMTP_FROM || "BSNL Status Hub <alerts@navyaa-dev.me>",
+  RESEND_API_KEY: process.env.RESEND_API_KEY || "",
 } as const;
