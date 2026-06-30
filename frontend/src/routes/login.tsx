@@ -198,9 +198,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} BSNL Corp. Operations Department. All rights reserved.
-        </div>
+
       </div>
 
       {/* Right Side: Centered Glass Login Card */}
