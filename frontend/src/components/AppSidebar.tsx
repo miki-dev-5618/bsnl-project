@@ -37,12 +37,12 @@ export function AppSidebar() {
             className="h-8 w-auto object-contain shrink-0 transition-transform duration-300 hover:rotate-12"
           />
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-bold tracking-tight text-foreground">BSNL</span>
-            <span className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase">SMS Monitor</span>
+            <span className="text-sm font-bold tracking-tight text-foreground">BSNL SMART</span>
+            <span className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase">SMS Monitoring and Add-on  Revenue Tool</span>
           </div>
         </div>
       </SidebarHeader>
-      
+
       <SidebarContent className="p-2">
         <SidebarGroup>
           <SidebarGroupLabel className="px-3 text-[10px] font-bold tracking-widest text-muted-foreground/60 uppercase group-data-[collapsible=icon]:hidden">
@@ -77,12 +77,12 @@ export function AppSidebar() {
                             }}
                           />
                         )}
-                        
+
                         <item.icon className={cn(
                           "h-5 w-5 transition-transform duration-200",
                           isActive ? "text-primary scale-105" : "text-muted-foreground group-hover:text-foreground group-hover:scale-105"
                         )} />
-                        
+
                         <span className="text-sm transition-all duration-200 group-data-[collapsible=icon]:hidden">
                           {item.title}
                         </span>

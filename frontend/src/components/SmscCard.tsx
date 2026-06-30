@@ -27,28 +27,28 @@ export function SmscCard({ smsc, onClick }: { smsc: SMSC; onClick: () => void })
     <Card
       onClick={onClick}
       className={cn(
-        "group relative overflow-hidden cursor-pointer p-5 border border-white/60 dark:border-zinc-800/40 bg-white/70 dark:bg-zinc-900/50 backdrop-blur-md shadow-sm rounded-3xl",
-        "transition-all duration-300 hover:translate-y-[-3px] hover:shadow-lg hover:border-primary/20 dark:hover:border-primary/30",
+        "group relative overflow-hidden cursor-pointer p-[17px] border border-white/60 dark:border-zinc-800/40 bg-white/70 dark:bg-zinc-900/50 backdrop-blur-md shadow-sm rounded-[20.4px]",
+        "transition-all duration-300 hover:translate-y-[-2.55px] hover:shadow-lg hover:border-primary/20 dark:hover:border-primary/30",
       )}
     >
       {/* Sleek left-side status glow indicator */}
-      <div className={cn("absolute left-0 top-4 bottom-4 w-1 rounded-r-full", statusGlow[smsc.status])} />
+      <div className={cn("absolute left-0 top-[13.6px] bottom-[13.6px] w-[3.4px] rounded-r-full", statusGlow[smsc.status])} />
 
-      <div className="flex items-start justify-between gap-2 pl-2">
-        <div className="space-y-2">
+      <div className="flex items-start justify-between gap-[6.8px] pl-[6.8px]">
+        <div className="space-y-[6.8px]">
           <div>
-            <div className="text-sm font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-200">
+            <div className="text-[11.9px] font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-200">
               {smsc.name}
             </div>
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground font-medium">
-              <MapPin className="h-3 w-3 shrink-0" />
+            <div className="flex items-center gap-[3.4px] mt-[3.4px] text-[9.35px] text-muted-foreground font-medium">
+              <MapPin className="h-[10.2px] w-[10.2px] shrink-0" />
               {smsc.city}
             </div>
           </div>
           
           <span
             className={cn(
-              "inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold tracking-wide uppercase",
+              "inline-flex items-center rounded-full border px-[6.8px] py-[1.7px] text-[7.65px] font-bold tracking-wide uppercase",
               locationStyles[smsc.location],
             )}
           >
@@ -56,31 +56,31 @@ export function SmscCard({ smsc, onClick }: { smsc: SMSC; onClick: () => void })
           </span>
         </div>
 
-        <StatusBadge status={smsc.status} />
+        <StatusBadge status={smsc.status} className="px-[6.8px] py-[1.7px] text-[10.2px] gap-[5.1px]" />
       </div>
 
       {/* Stats Divider Line */}
-      <div className="h-px bg-border/50 my-4 pl-2" />
+      <div className="h-px bg-border/50 my-[13.6px] pl-[6.8px]" />
 
       {/* Grid containing secondary specs */}
-      <div className="grid grid-cols-2 gap-y-1.5 pl-2 text-xs font-medium text-muted-foreground">
-        <div className="flex items-center gap-1">
+      <div className="grid grid-cols-2 gap-y-[5.1px] pl-[6.8px] text-[10.2px] font-medium text-muted-foreground">
+        <div className="flex items-center gap-[3.4px]">
           {brokenCount > 0 ? (
-            <ServerCrash className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+            <ServerCrash className="h-[11.9px] w-[11.9px] text-amber-500 shrink-0" />
           ) : (
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+            <CheckCircle2 className="h-[11.9px] w-[11.9px] text-emerald-500 shrink-0" />
           )}
           <span>
             POIs <strong className="text-foreground">{smsc.pois.length - brokenCount}</strong>/{smsc.pois.length}
           </span>
         </div>
 
-        <div className="text-right flex items-center justify-end gap-1 font-mono text-[10px]">
-          <RefreshCw className="h-3 w-3 text-muted-foreground animate-[spin_4s_linear_infinite]" />
+        <div className="text-right flex items-center justify-end gap-[3.4px] font-mono text-[8.5px]">
+          <RefreshCw className="h-[10.2px] w-[10.2px] text-muted-foreground animate-[spin_4s_linear_infinite]" />
           <span>{formatDistanceToNow(smsc.lastUpdatedAt)}</span>
         </div>
 
-        <div className="col-span-2 truncate text-[10px] text-muted-foreground/80 mt-1">
+        <div className="col-span-2 truncate text-[8.5px] text-muted-foreground/80 mt-[3.4px]">
           Updated by <span className="font-semibold text-foreground/75">{smsc.lastUpdatedBy}</span>
         </div>
       </div>

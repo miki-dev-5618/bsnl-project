@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { login, useSession, initTheme } from "@/lib/store";
 import { toast } from "sonner";
-import { ShieldCheck, Server, AlertCircle } from "lucide-react";
+import { ShieldCheck, Server, AlertCircle, Network } from "lucide-react";
 
 function CanvasParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -152,7 +152,7 @@ export default function LoginPage() {
       {/* Left Side: Branding, illustration, dynamic particles */}
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-gradient-to-b from-primary/5 via-secondary/5 to-background p-12 md:flex border-r border-border/40">
         <CanvasParticles />
-        
+
         {/* Top Header */}
         <div className="flex items-center gap-3">
           <img
@@ -187,12 +187,27 @@ export default function LoginPage() {
             <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
               <Server className="h-5 w-5 text-primary mb-2" />
               <div className="text-xs text-muted-foreground">Monitored nodes</div>
-              <div className="text-lg font-bold text-foreground">16 SMSCs</div>
+              <div className="text-lg font-bold text-foreground">14 SSTPs</div>
             </div>
             <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
               <ShieldCheck className="h-5 w-5 text-emerald-500 mb-2" />
               <div className="text-xs text-muted-foreground">System SLA</div>
               <div className="text-lg font-bold text-foreground">99.98%</div>
+              <div className="grid grid-cols-2 gap-4">
+
+              </div>
+
+
+            </div>
+            <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
+              <Server className="h-5 w-5 text-primary mb-2" />
+              <div className="text-xs text-muted-foreground">Monitored gateways</div>
+              <div className="text-lg font-bold text-foreground">10 SMSCs</div>
+            </div>
+            <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
+              <Network className="h-5 w-5 text-emerald-500 mb-2" />
+              <div className="text-xs text-muted-foreground">Total POIs</div>
+              <div className="text-lg font-bold text-foreground">42 POIs</div>
             </div>
           </div>
         </div>
@@ -257,14 +272,6 @@ export default function LoginPage() {
                 </Button>
               </motion.div>
 
-              <motion.div variants={itemVariants} className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-4 text-[11px] text-muted-foreground flex gap-2.5 items-start mt-4">
-                <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <div className="font-semibold text-foreground">Demo Accounts</div>
-                  <div>Admin: <span className="font-mono text-foreground select-all">admin@bsnl.in / admin123</span></div>
-                  <div>User: <span className="font-mono text-foreground select-all">user01@bsnl.in / user123</span></div>
-                </div>
-              </motion.div>
             </form>
           </Card>
         </motion.div>

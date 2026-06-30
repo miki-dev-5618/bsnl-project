@@ -90,7 +90,7 @@ export function MetricCards() {
 
   const cardsData = [
     {
-      title: "Total SMSCs",
+      title: "Total SSTPs",
       value: total,
       icon: Server,
       color: "#3971B8",

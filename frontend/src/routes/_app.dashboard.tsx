@@ -58,7 +58,7 @@ export default function Dashboard() {
       {/* SMSC Nodes Grid Section */}
       <div className="space-y-4 pt-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-bold tracking-tight text-foreground">SMS Gateways (SMSCs)</h2>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">SMS Gateways (SSTPs)</h2>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-full border border-border/45">
               {activePois}/{totalPois} POIs Up

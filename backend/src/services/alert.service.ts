@@ -45,15 +45,15 @@ export async function notifySubscribers(
 
   const statusColor =
     newStatus === "DOWN" ? "#dc2626" : newStatus === "DEGRADED" ? "#f59e0b" : "#16a34a";
-  const subject = `[BSNL Status] SMSC ${smscName} (${city}) is ${newStatus}`;
+  const subject = `[BSNL Status] SSTP ${smscName} (${city}) is ${newStatus}`;
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
       <h2 style="color: ${statusColor};">
-        SMSC Status Update
+        SSTP Status Update
       </h2>
       <table style="border-collapse: collapse; width: 100%; max-width: 500px;">
         <tr>
-          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">SMSC</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">SSTP</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${smscName}</td>
         </tr>
         <tr>
@@ -66,16 +66,15 @@ export async function notifySubscribers(
             ${newStatus}
           </td>
         </tr>
-        ${
-          note
-            ? `
+        ${note
+      ? `
         <tr>
           <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Note</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${note}</td>
         </tr>
         `
-            : ""
-        }
+      : ""
+    }
       </table>
       <p style="color: #6b7280; margin-top: 16px; font-size: 12px;">
         This is an automated alert from BSNL Status Hub.
@@ -143,16 +142,15 @@ export async function notifyPoiStatus(
             ${newStatus}
           </td>
         </tr>
-        ${
-          note
-            ? `
+        ${note
+      ? `
         <tr>
           <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Note</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${note}</td>
         </tr>
         `
-            : ""
-        }
+      : ""
+    }
       </table>
       <p style="color: #6b7280; margin-top: 16px; font-size: 12px;">
         This is an automated alert from BSNL Status Hub.
