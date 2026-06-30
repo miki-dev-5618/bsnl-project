@@ -11,6 +11,7 @@ const Role = { ADMIN: "ADMIN", REGIONAL: "REGIONAL" } as const;
 const SmscStatusType = { UP: "UP", DOWN: "DOWN", DEGRADED: "DEGRADED" } as const;
 
 const INDIAN_CITIES: Array<{ name: string; city: string; lat: number; lng: number }> = [
+  
   { name: "SMSC-DEL-01", city: "New Delhi", lat: 28.6139, lng: 77.209 },
   { name: "SMSC-MUM-01", city: "Mumbai", lat: 19.076, lng: 72.8777 },
   { name: "SMSC-CHN-01", city: "Chennai", lat: 13.0827, lng: 80.2707 },
@@ -27,7 +28,7 @@ const INDIAN_CITIES: Array<{ name: string; city: string; lat: number; lng: numbe
   { name: "SMSC-CHD-01", city: "Chandigarh", lat: 30.7333, lng: 76.7794 },
   { name: "SMSC-TVM-01", city: "Thiruvananthapuram", lat: 8.5241, lng: 76.9366 },
   { name: "SMSC-RAN-01", city: "Ranchi", lat: 23.3441, lng: 85.3096 },
-];
+];  
 
 const REGIONS = [
   "North", "West", "South", "East",
@@ -111,7 +112,9 @@ async function main() {
           smscId: smsc.id,
           name: `${smsc.name}-${op}-POI`,
           status: isBroken ? "BROKEN" : "ACTIVE",
-          note: isBroken ? "Link failure detected on interconnect trunk" : "Interconnect trunk healthy",
+          note: isBroken
+            ? "interconnect disturbed, restrict the traffic to above poi"
+            : "interconnect healthy, restart traffic",
           updatedById: admin.id,
         },
       });
@@ -123,12 +126,9 @@ async function main() {
   // Create some alert subscribers
   await prisma.alertSubscriber.createMany({
     data: [
-      { email: "noc@bsnl.in", phone: "+911234567890" },
-      { email: "ops-lead@bsnl.in", phone: "+911234567891" },
-      { email: "cto-office@bsnl.in" },
+
     ],
   });
-  console.log(`  ✓ 3 alert subscribers created`);
 
   console.log("✅ Seed complete!");
 }
