@@ -16,7 +16,7 @@ async function sendGmail(to: string, subject: string, html: string): Promise<boo
       console.warn("[Alert] Gmail user or App Password is not configured in .env. Skipping email.");
       return false;
     }
-    
+
     await transporter.sendMail({
       from: `"BSNL Status Hub" <${env.GMAIL_USER}>`,
       to,
@@ -35,7 +35,7 @@ export async function notifySubscribers(
   smscName: string,
   city: string,
   newStatus: string,
-  note?: string
+  note?: string,
 ) {
   const subscribers = await prisma.alertSubscriber.findMany();
   if (subscribers.length === 0) {
@@ -43,7 +43,8 @@ export async function notifySubscribers(
     return;
   }
 
-  const statusColor = newStatus === "DOWN" ? "#dc2626" : newStatus === "DEGRADED" ? "#f59e0b" : "#16a34a";
+  const statusColor =
+    newStatus === "DOWN" ? "#dc2626" : newStatus === "DEGRADED" ? "#f59e0b" : "#16a34a";
   const subject = `[BSNL Status] SMSC ${smscName} (${city}) is ${newStatus}`;
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
@@ -65,12 +66,16 @@ export async function notifySubscribers(
             ${newStatus}
           </td>
         </tr>
-        ${note ? `
+        ${
+          note
+            ? `
         <tr>
           <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Note</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${note}</td>
         </tr>
-        ` : ""}
+        `
+            : ""
+        }
       </table>
       <p style="color: #6b7280; margin-top: 16px; font-size: 12px;">
         This is an automated alert from BSNL Status Hub.
@@ -81,7 +86,7 @@ export async function notifySubscribers(
   const emails = subscribers.map((s: { email: string }) => s.email);
   try {
     console.log(`[Mailer] Sending subscriber notification using Resend...`);
-    
+
     const batchMessages = emails.map((email: string) => ({
       from: env.SMTP_FROM,
       to: [email],
@@ -90,9 +95,9 @@ export async function notifySubscribers(
     }));
 
     const { data, error } = await resend.batch.send(batchMessages);
-    console.log('[Alert] Resend batch data:', data);
-    console.log('[Alert] Resend batch error:', error);
-    
+    console.log("[Alert] Resend batch data:", data);
+    console.log("[Alert] Resend batch error:", error);
+
     if (error) {
       console.error("[Alert] Resend API error occurred:", error.message || error);
     } else {
@@ -107,7 +112,7 @@ export async function notifyPoiStatus(
   poiName: string,
   smscName: string,
   newStatus: string,
-  note?: string
+  note?: string,
 ) {
   const subscribers = await prisma.alertSubscriber.findMany();
   if (subscribers.length === 0) {
@@ -115,12 +120,13 @@ export async function notifyPoiStatus(
     return;
   }
 
-  const statusColor = newStatus === "BROKEN" ? "#dc2626" : newStatus === "ACTIVE" ? "#16a34a" : "#f59e0b";
-  const subject = `[BSNL Status] POI ${poiName} (SMSC: ${smscName}) is ${newStatus}`;
+  const statusColor =
+    newStatus === "BROKEN" ? "#dc2626" : newStatus === "ACTIVE" ? "#16a34a" : "#f59e0b";
+  const subject = `TEST [BSNL Status] POI ${poiName} (SMSC: ${smscName}) is ${newStatus}`;
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
       <h2 style="color: ${statusColor};">
-        POI Status Update
+        TEST POI Status Update
       </h2>
       <table style="border-collapse: collapse; width: 100%; max-width: 500px;">
         <tr>
@@ -137,12 +143,16 @@ export async function notifyPoiStatus(
             ${newStatus}
           </td>
         </tr>
-        ${note ? `
+        ${
+          note
+            ? `
         <tr>
           <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Note</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${note}</td>
         </tr>
-        ` : ""}
+        `
+            : ""
+        }
       </table>
       <p style="color: #6b7280; margin-top: 16px; font-size: 12px;">
         This is an automated alert from BSNL Status Hub.
@@ -162,8 +172,8 @@ export async function notifyPoiStatus(
     }));
 
     const { data, error } = await resend.batch.send(batchMessages);
-    console.log('[Alert] Resend POI batch data:', data);
-    console.log('[Alert] Resend POI batch error:', error);
+    console.log("[Alert] Resend POI batch data:", data);
+    console.log("[Alert] Resend POI batch error:", error);
 
     if (error) {
       console.error("[Alert] Resend API error occurred for POI:", error.message || error);
