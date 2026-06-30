@@ -6,30 +6,7 @@ import { prisma } from "../lib/prisma";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
-/**
- * Reusable helper function to send an email to a single recipient.
- * Fully awaited and logs any individual success/error.
- */
-async function sendGmail(to: string, subject: string, html: string): Promise<boolean> {
-  try {
-    if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
-      console.warn("[Alert] Gmail user or App Password is not configured in .env. Skipping email.");
-      return false;
-    }
 
-    await transporter.sendMail({
-      from: `"BSNL Status Hub" <${env.GMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    });
-    console.log(`[Alert] Email sent successfully to ${to}`);
-    return true;
-  } catch (error) {
-    console.error(`[Alert] Failed to send email to ${to}:`, error);
-    return false;
-  }
-}
 
 export async function notifySubscribers(
   smscName: string,
@@ -121,7 +98,7 @@ export async function notifyPoiStatus(
 
   const statusColor =
     newStatus === "BROKEN" ? "#dc2626" : newStatus === "ACTIVE" ? "#16a34a" : "#f59e0b";
-  const subject = `TEST [BSNL Status] POI ${poiName} (SMSC: ${smscName}) is ${newStatus}`;
+  const subject = `TEST [BSNL Status] POI ${poiName} (SSTP: ${smscName}) is ${newStatus}`;
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
       <h2 style="color: ${statusColor};">
@@ -133,7 +110,7 @@ export async function notifyPoiStatus(
           <td style="padding: 8px; border: 1px solid #ddd;">${poiName}</td>
         </tr>
         <tr>
-          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">SMSC</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">SSTP</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${smscName}</td>
         </tr>
         <tr>

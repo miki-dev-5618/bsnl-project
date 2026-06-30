@@ -161,8 +161,8 @@ export default function LoginPage() {
             className="h-10 w-auto object-contain"
           />
           <div className="flex flex-col leading-none">
-            <span className="font-bold text-lg tracking-tight text-foreground">BSNL</span>
-            <span className="text-xs text-muted-foreground font-medium">SMS Control Center</span>
+            <span className="font-bold text-lg tracking-tight text-foreground">BSNL SMART</span>
+            <span className="text-xs text-muted-foreground font-medium">SMS Monitoring and Add-on Revenue Tool</span>
           </div>
         </div>
 
@@ -186,8 +186,18 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
               <Server className="h-5 w-5 text-primary mb-2" />
+              <div className="text-xs text-muted-foreground">Monitored gateways</div>
+              <div className="text-lg font-bold text-foreground">10 SMSCs</div>
+            </div>
+            <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
+              <Server className="h-5 w-5 text-primary mb-2" />
               <div className="text-xs text-muted-foreground">Monitored nodes</div>
               <div className="text-lg font-bold text-foreground">14 SSTPs</div>
+            </div>
+            <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
+              <Network className="h-5 w-5 text-emerald-500 mb-2" />
+              <div className="text-xs text-muted-foreground">Total POIs</div>
+              <div className="text-lg font-bold text-foreground">42 POIs</div>
             </div>
             <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
               <ShieldCheck className="h-5 w-5 text-emerald-500 mb-2" />
@@ -199,16 +209,8 @@ export default function LoginPage() {
 
 
             </div>
-            <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
-              <Server className="h-5 w-5 text-primary mb-2" />
-              <div className="text-xs text-muted-foreground">Monitored gateways</div>
-              <div className="text-lg font-bold text-foreground">10 SMSCs</div>
-            </div>
-            <div className="rounded-2xl border border-white/60 dark:border-zinc-800/40 bg-white/45 dark:bg-zinc-900/40 p-4 backdrop-blur-sm shadow-sm">
-              <Network className="h-5 w-5 text-emerald-500 mb-2" />
-              <div className="text-xs text-muted-foreground">Total POIs</div>
-              <div className="text-lg font-bold text-foreground">42 POIs</div>
-            </div>
+
+
           </div>
         </div>
 
@@ -231,8 +233,9 @@ export default function LoginPage() {
               alt="BSNL Logo"
               className="h-12 w-auto object-contain mb-4"
             />
-            <h1 className="text-2xl font-bold text-foreground">BSNL SMS Control Center</h1>
-            <p className="text-sm text-muted-foreground mt-1">Sign in to manage SMSC gateways</p>
+            <h1 className="text-2xl font-bold text-foreground">BSNL SMART</h1>
+
+            <p className="text-sm text-muted-foreground mt-1">SMS Monitoring and Add-on  Revenue Tool</p>
           </div>
 
           <Card className="rounded-3xl border border-white/60 dark:border-zinc-800/50 bg-white/55 dark:bg-zinc-900/40 p-8 backdrop-blur-xl shadow-xl">
